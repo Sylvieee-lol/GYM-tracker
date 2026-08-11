@@ -1,0 +1,38 @@
+name: 抓取內湖運動中心人數資料
+
+on:
+  schedule:
+    # 每 15 分鐘執行一次（GitHub 使用 UTC 時間，這裡的排程與時區無關，
+    # 實際的日期時間換算在 Python 腳本裡處理）
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}  # 讓你也可以手動在網頁上按按鈕測試執行
+
+# 讓這個 workflow 有權限把抓到的資料 commit 回 repo
+permissions:
+  contents: write
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 簽出 repo
+        uses: actions/checkout@v4
+
+      - name: 設定 Python 環境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安裝套件
+        run: pip install requests
+
+      - name: 執行抓取腳本
+        run: python fetch_gym_data.py
+
+      - name: 把資料 commit 回 repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add gym_data.csv
+          git diff --staged --quiet && echo "沒有新資料變化" || git commit -m "自動更新健身房人數資料 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
